@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Dashboard Analítico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: estudo sério, mas leve — uma folha de prova corrigida
+   IDEA: a página se comporta como uma prova impressa que corrige com caneta vermelha
+   PICTURE: placar grande em "caneta vermelha" no topo + as próprias questões como folha pautada
+   COLOUR/TYPE: papel branco, tinta azul-escura, vermelho de correção; Source Sans 3 + Caveat para as marcas
+   LAYOUT: cabeçalho de prova, abas dos dois quizzes, questões em coluna única */
+:root{color-scheme:light dark;
+--bg:light-dark(#eef1f5,#0f1420);--paper:light-dark(#ffffff,#171e2d);--ink:light-dark(#14213d,#e6ebf5);
+--muted:light-dark(#5b6478,#9aa5bb);--line:light-dark(#d7deea,#2a3448);--red:light-dark(#d62828,#ff6b6b);
+--blue:light-dark(#1d4ed8,#7aa2ff);--ok:light-dark(#e8f6ee,#13301f);--okb:light-dark(#2f9e5b,#4ccf7f);--bad:light-dark(#fdecec,#3a1717)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Source Sans 3",system-ui,sans-serif;overflow-x:clip}
+.sheet{max-width:860px;margin:clamp(12px,3vw,40px) auto;background:var(--paper);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 30px rgba(20,33,61,.08)}
+header{padding:clamp(20px,4vw,40px) clamp(16px,4vw,44px) 20px;border-bottom:2px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end}
+h1{font-size:clamp(28px,5vw,42px);line-height:1.05;margin:0 0 8px;text-wrap:balance}
+.meta{color:var(--muted);font-size:15px;margin:0}
+.score{font-family:Caveat,cursive;color:var(--red);font-size:clamp(48px,9vw,76px);line-height:.9;text-align:center;transform:rotate(-6deg);border:3px solid var(--red);border-radius:50%;width:clamp(110px,18vw,150px);aspect-ratio:1;display:grid;place-content:center}
+.score small{display:block;font-size:20px;line-height:1}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;padding:16px clamp(16px,4vw,44px);border-bottom:1px solid var(--line)}
+.tabs button,.actions button{font:600 16px "Source Sans 3",sans-serif;min-height:44px;padding:8px 16px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--paper)}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.bar{height:6px;background:var(--line);margin:0 clamp(16px,4vw,44px);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--red);width:0;transition:width .3s}
+ol.qs{list-style:none;margin:0;padding:8px clamp(16px,4vw,44px) 24px;counter-reset:q}
+.q{padding:22px 0;border-bottom:1px dashed var(--line);counter-increment:q;position:relative}
+.q h2{font-size:17px;font-weight:600;margin:0 0 12px;line-height:1.45}
+.q h2::before{content:counter(q) ". ";color:var(--muted)}
+.tag{display:inline-block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;font:16px/1.45 "Source Sans 3",sans-serif;color:var(--ink);background:transparent;border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;min-height:44px}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt b{flex:none;width:24px}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--ok);border-color:var(--okb)}
+.opt.wrong{background:var(--bad);border-color:var(--red)}
+.mark{position:absolute;right:0;top:14px;font-family:Caveat,cursive;font-size:36px;color:var(--red);line-height:1}
+.exp{margin-top:12px;padding:12px 14px;border-left:3px solid var(--red);background:light-dark(#fff7f7,#221a1f);font-size:15px}
+.exp strong{color:var(--red);font-family:Caveat,cursive;font-size:22px;margin-right:6px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;padding:0 clamp(16px,4vw,44px) 32px;align-items:center}
+.actions p{margin:0;color:var(--muted);font-size:15px}
+footer{padding:0 clamp(16px,4vw,44px) 28px;color:var(--muted);font-size:13px}
+@media(max-width:600px){header{grid-template-columns:1fr}.score{justify-self:start}}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header>
+    <div>
+      <h1>Projeto de Desenvolvimento de Dashboard Analítico</h1>
+      <p class="meta">Quiz de revisão · UniSales · 2º bimestre. Clique em uma alternativa para ver a correção.</p>
+    </div>
+    <div class="score" aria-live="polite"><span id="sc">0/0</span><small>acertos</small></div>
+  </header>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t0" aria-selected="true">UAs do 2º bimestre</button>
+    <button role="tab" id="t1" aria-selected="false">Revisão da última prova</button>
+  </div>
+  <div class="bar"><i id="bar"></i></div>
+  <ol class="qs" id="qs"></ol>
+  <div class="actions"><button id="reset">Refazer este quiz</button><p id="left"></p></div>
+  <footer>Questões elaboradas a partir das Unidades de Aprendizagem do AVA e da última prova da disciplina.</footer>
+</main>
+<script>
+{
+const Q=[
+[
+["Padrões cognitivos","Na retina, quais células ganglionares são sensíveis às diferenças de cor?",["Magnocélulas","Parvocélulas","Fotorreceptores sacádicos","Fibras do nervo óptico"],1,"As parvocélulas são sensíveis à cor; as magnocélulas são cegas à cor. A percepção visual tem subsistemas especializados."],
+["Padrões cognitivos","Em uma onda de luz, qual propriedade é o principal determinante da sensação de cor?",["A intensidade da onda","A energia radiante por unidade de tempo","O comprimento de onda","A velocidade de propagação"],2,"O comprimento de onda determina a cor; a intensidade (energia por unidade de tempo) responde pelo brilho. O espectro visível vai de ~380 nm a ~700 nm."],
+["Padrões cognitivos","Quais são os três desafios da percepção humana na visualização de dados apresentados na UA?",["Cor, textura e movimento","Acuidade visual, estética e engajamento","Tonalidade, brilho e saturação","Luminância, iluminância e distância"],1,"Os desafios são acuidade visual, estética e engajamento. Luminância, iluminância e distância são fatores que afetam a acuidade."],
+["Introdução à visualização","No processo de visualização, qual etapa associa os atributos dos dados a propriedades visuais como posição, tamanho, cor e forma?",["Filtragem","Renderização","Mapeamento","Importação"],2,"Sequência: importação → filtragem → mapeamento (dado → propriedade visual) → renderização."],
+["Introdução à visualização","Sobre a evolução da visualização com dashboards, big data e IA, qual afirmação é FALSA?",["O aumento da capacidade computacional permitiu visualizações mais interativas.","A computação em nuvem ampliou o acesso a ferramentas de visualização.","Os sistemas atuais fazem toda a análise sozinhos, então interpretar os resultados ficou dispensável.","Dashboards são usados em saúde, logística, educação e finanças para apoiar decisões."],2,"A interpretação continua dependendo da análise humana, do contexto e dos objetivos."],
+["Análise de negócios em BI","Qual componente de BI organiza os dados de forma multidimensional para análise sob diferentes perspectivas?",["ETL","Data Mining","OLAP","Data Warehouse"],2,"OLAP é a representação multidimensional. ETL prepara e transfere; o DW centraliza; o Data Mining busca padrões."],
+["Análise de negócios em BI","Qual tecnologia centraliza os dados dos vários sistemas da organização, com base em extração, transformação e carga?",["Data Warehouse","Data Mining","Balanced Scorecard","Modelo Canvas"],0,"O Data Warehouse centraliza os dados, alimentado por ETL."],
+["Análise de negócios em BI","Qual alternativa NÃO é fase do CRISP-DM?",["Preparação dos dados","Modelagem","Implantação","Forças e fraquezas"],3,"CRISP-DM: entendimento do negócio, entendimento dos dados, preparação, modelagem, avaliação e implantação. Forças e fraquezas são da SWOT."],
+["Análise de negócios em BI","Qual ferramenta surgiu no Japão nos anos 1970, usa missão, valores e crenças para criar diretrizes e tem quatro etapas?",["PDCA","SMART","Gerenciamento pelas Diretrizes (GPD)","SWOT"],2,"O GPD tem as etapas: escolha do objetivo, alinhamento, implementação e melhorias."],
+["Power BI","Sobre o fluxo de trabalho do Power BI, qual afirmação está correta?",["O relatório é criado no Mobile e publicado no Desktop.","O relatório é criado no Desktop, publicado no serviço do Power BI e pode ser consumido no Mobile.","O serviço do Power BI só funciona offline.","O Power BI tem um único elemento, o Desktop."],1,"Os três elementos são Desktop, serviço do Power BI e Mobile."],
+["Power BI","Sobre as funções DAX, qual afirmação está correta?",["Aceitam referência de células ou intervalos, como no Excel.","Não podem ser usadas no Power Pivot.","Aceitam colunas ou tabelas como referência e têm funções de inteligência de tempo.","Só fazem somas simples."],2,"DAX trabalha com colunas e tabelas, faz agregações, filtros e condicionais, e tem inteligência de tempo."],
+["Visualização de gráficos","Linhas de um gráfico se sobrepõem em 2019. Qual técnica mostra essa região em detalhe, alterando a escala sem distorcer?",["Brushing","Zoom","Agrupamento","Filtro"],1,"Zoom altera a escala. Brushing destaca relações; filtro mostra dados condicionalmente; agrupamento resume na tabela dinâmica."],
+["Visualização de gráficos","Para dados que mudam com o tempo, que gráfico usar e a que tabela associá-lo?",["Gráfico estático + tabela estática","Gráfico estatístico + tabela de médias","Gráfico dinâmico + tabela dinâmica","Gráfico de barras + tabela estática"],2,"Dados que mudam pedem gráfico dinâmico ligado a uma tabela dinâmica."],
+["Visualização de gráficos","Qual técnica marca um dado no gráfico para evidenciá-lo entre muitos dados?",["Seleção","Reconfiguração","Zoom","Agrupamento"],0,"Seleção destaca visualmente um dado; reconfiguração mostra outra composição; zoom altera a escala."]
+],
+[
+["Tipos de variável","A variável \"nível de escolaridade\" (fundamental, médio, superior) é:",["Qualitativa nominal","Qualitativa ordinal","Quantitativa discreta","Quantitativa contínua"],1,"Tem ordem natural, mas não é número: qualitativa ordinal."],
+["Tipos de variável","Qual das variáveis é quantitativa CONTÍNUA?",["Número de filhos","Número de faltas","Altura em metros","Turno de estudo"],2,"Contínua é medida; discreta é contada. Turno é qualitativa nominal."],
+["Média","Cores codificadas (1 = azul, 2 = preta, 3 = branca) deram uma \"média de cor\" de 1,8. O que se pode afirmar?",["A média é válida porque os dados foram codificados","A média é válida porque o resultado é decimal","A média não faz sentido: cor é qualitativa nominal; usa-se frequência ou moda","Só seria inválida se desse um número inteiro"],2,"Códigos são rótulos. Codificar não torna a variável quantitativa."],
+["Mediana","Com 0 erros (f=10), 1 erro (f=6), 2 erros (f=3) e 3 erros (f=2), qual é a mediana?",["0","0,5","1","1,5"],2,"n = 21, então a mediana é o 11º valor. O 0 ocupa do 1º ao 10º; o 11º já é 1."],
+["Dispersão","O desvio médio é calculado por:",["Σ f·(x − x̄)² / (n − 1), com raiz no final","Σ f·|x − x̄| / n","Maior valor − menor valor","Σ f·x / n"],1,"Desvio médio = média dos desvios absolutos. A primeira é o desvio padrão amostral."],
+["Tendência central","Passageiros em 10 dias: 300, 310, 305, 298, 302, 307, 301, 299, 304 e 2.000. Qual medida representa o valor típico?",["Média, porque usa todos os valores","Mediana, porque resiste a valores extremos","Moda, porque sempre há repetidos","Amplitude, porque mostra a variação"],1,"O 2.000 é outlier e distorce a média; a mediana não é afetada."],
+["Distribuição de frequências","Para uma variável contínua com muitos valores diferentes (idade, salário), o mais adequado é:",["Listar cada valor com frequência 1 ou 2","Agrupar em classes (20–25, 25–30...)","Calcular só a média","Codificar como categorias nominais"],1,"Agrupar em classes mostra onde os dados se concentram."],
+["DW e ETL","Dados de ERP, CRM e sistemas legados: quais tecnologias integram e centralizam para análise?",["Pandas e NumPy","ETL e Data Warehouse","Excel e Word","OLTP e backup"],1,"ETL extrai, transforma e carrega; o DW centraliza com histórico para análise."],
+["DW e ETL","Uma vantagem do Data Warehouse em relação aos sistemas transacionais (OLTP):",["Registra vendas em tempo real no caixa","Mantém histórico consolidado e otimizado para análise, sem sobrecarregar a produção","Substitui o ERP","Elimina o tratamento dos dados"],1,"OLTP é para a operação; DW é para análise, com histórico e modelagem dimensional."],
+["Tipos de dado","Um arquivo JSON vindo de uma API é um dado:",["Estruturado","Semiestruturado","Não estruturado","Qualitativo ordinal"],1,"JSON tem marcações (chave e valor) sem esquema rígido de tabela."],
+["Estatística e ciência de dados","Qual é a relação correta entre estatística e ciência de dados?",["São a mesma coisa","Ciência de dados é método da estatística descritiva","A estatística é ferramenta da ciência de dados, usada para processar e explorar os resultados","Estatística serve só para coletar dados"],2,"A ciência de dados é mais ampla e usa a estatística para processar e explorar."],
+["Média ponderada","2 gerentes ganham R$ 8.000 e 8 analistas ganham R$ 4.000. Qual é o salário médio ponderado?",["R$ 6.000,00","R$ 4.800,00","R$ 5.000,00","R$ 4.000,00"],1,"(2 × 8.000 + 8 × 4.000) / 10 = 4.800. R$ 6.000 seria a média simples, que ignora as quantidades."]
+]];
+const L="ABCDE",esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+let cur=0;const ans=[[],[]];
+const qs=document.getElementById('qs'),sc=document.getElementById('sc'),bar=document.getElementById('bar'),left=document.getElementById('left');
+function render(){
+  qs.innerHTML=Q[cur].map((q,i)=>{const a=ans[cur][i];const done=a!==undefined;
+    return `<li class="q"><span class="tag">${esc(q[0])}</span><h2>${esc(q[1])}</h2>
+    ${done?`<span class="mark" aria-hidden="true">${a===q[3]?'✓':'✗'}</span>`:''}
+    <div class="opts">${q[2].map((o,j)=>`<button class="opt ${done&&j===q[3]?'right':''} ${done&&j===a&&a!==q[3]?'wrong':''}" data-q="${i}" data-o="${j}" ${done?'disabled':''}><b>${L[j]})</b><span>${esc(o)}</span></button>`).join('')}</div>
+    ${done?`<div class="exp"><strong>${a===q[3]?'Certo!':'Resposta: '+L[q[3]]}</strong>${esc(q[4])}</div>`:''}</li>`}).join('');
+  const n=ans[cur].filter(x=>x!==undefined).length,ok=ans[cur].filter((x,i)=>x===Q[cur][i][3]).length;
+  sc.textContent=ok+'/'+n;bar.style.width=(n/Q[cur].length*100)+'%';
+  left.textContent=n===Q[cur].length?`Fim! Você acertou ${ok} de ${Q[cur].length}.`:`${Q[cur].length-n} questões restantes.`;
+}
+qs.addEventListener('click',e=>{const b=e.target.closest('.opt');if(!b||b.disabled)return;ans[cur][+b.dataset.q]=+b.dataset.o;render()});
+['t0','t1'].forEach((id,k)=>document.getElementById(id).addEventListener('click',()=>{cur=k;document.querySelectorAll('[role=tab]').forEach((t,m)=>t.setAttribute('aria-selected',m===k));render();window.scrollTo({top:0})}));
+document.getElementById('reset').addEventListener('click',()=>{ans[cur]=[];render();window.scrollTo({top:0})});
+render();
+}
+</script>
+</body>
+</html>
